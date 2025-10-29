@@ -1,0 +1,52 @@
+document.addEventListener("DOMContentLoaded", () => {
+  const langSelect = document.getElementById("languageSelect");
+  const labels = document.querySelectorAll(".lang");
+  const calcBtn = document.getElementById("calcBtn");
+
+  // 🕌 Language Switcher
+  langSelect.addEventListener("change", () => {
+    const lang = langSelect.value;
+    labels.forEach(label => {
+      label.textContent = label.dataset[lang];
+    });
+  });
+
+  // 🧮 Auto-calculate Service Years
+  document.getElementById("dor").addEventListener("change", calculateService);
+  document.getElementById("doa").addEventListener("change", calculateService);
+
+  function calculateService() {
+    const doa = new Date(document.getElementById("doa").value);
+    const dor = new Date(document.getElementById("dor").value);
+    if (doa && dor && dor > doa) {
+      const diff = dor.getFullYear() - doa.getFullYear();
+      document.getElementById("serviceYears").value = diff;
+    }
+  }
+
+  // 💰 Pension Calculation
+  calcBtn.addEventListener("click", () => {
+    const pay = parseFloat(document.getElementById("basicPay").value);
+    const years = parseFloat(document.getElementById("serviceYears").value);
+    const option = document.getElementById("option").value;
+
+    if (!pay || !years) {
+      alert("Please enter all details correctly.");
+      return;
+    }
+
+    let pension = (pay * years * 7) / 300; // base formula
+    let gratuity = pension * 12; // sample rule
+    let commutation = option === "commuted" ? pension * 0.35 : 0;
+
+    const total = pension + gratuity + commutation;
+
+    document.getElementById("result").innerHTML = `
+      <h3>Result:</h3>
+      <p><b>Pension:</b> Rs. ${pension.toFixed(2)}</p>
+      <p><b>Gratuity:</b> Rs. ${gratuity.toFixed(2)}</p>
+      <p><b>Commutation:</b> Rs. ${commutation.toFixed(2)}</p>
+      <p><b>Total Benefits:</b> Rs. ${total.toFixed(2)}</p>
+    `;
+  });
+});
