@@ -1,0 +1,87 @@
+/* PakPension v4 script — bilingual (EN/UR), pension + extras calculations */
+
+const nfPKR = new Intl.NumberFormat('en-PK', { style:'currency', currency:'PKR', maximumFractionDigits:2 });
+const commutationTable = {40:15.87,41:15.64,42:15.41,43:15.18,44:14.95,45:14.64,46:14.33,47:14.02,48:13.71,49:13.40,50:13.25,51:12.90,52:12.55,53:12.20,54:11.85,55:11.73,56:11.21,57:10.70,58:10.19,59:10.00,60:9.81,61:9.50,62:9.20,63:8.90,64:8.70,65:8.50};
+function getCommutationFactorByAge(ageNext){ if(commutationTable[ageNext]) return commutationTable[ageNext]; if(ageNext<40) return commutationTable[40]; return commutationTable[65]; }
+
+/* populate BPS */
+(function fillBPS(){
+  const sel = document.getElementById('bps');
+  sel.innerHTML = '<option value="">-- Select Grade --</option>';
+  for(let i=1;i<=22;i++){ const v=String(i).padStart(2,'0'); const opt=document.createElement('option'); opt.value=`BS-${v}`; opt.textContent=`BS-${v}`; sel.appendChild(opt); }
+})();
+
+/* select options data */
+const selectData = {
+  baseType:[{k:'last',en:'Last pay (default)',ur:'آخری تنخواہ (ڈیفالٹ)'},{k:'avg12',en:'Average of last 12 months',ur:'گزشتہ 12 ماہ کی اوسط'}],
+  pensionType:[{k:'super',en:'Superannuation / Retiring',ur:'سپرانیویشن / ریٹائرنگ'},{k:'death_service',en:'Death during service (Family)',ur:'سروس کے دوران انتقال (خاندانی)'},{k:'death_after',en:'Death after retirement',ur:'ریٹائرمنٹ کے بعد انتقال'},{k:'invalid',en:'Invalid pension',ur:'انویلڈ پینشن'}],
+  scheme:[{k:'old',en:'Old Pension Scheme',ur:'پرانا پنشن سکیم'},{k:'new',en:'New Pension Scheme',ur:'نیا پنشن سکیم'}]
+};
+function populateSelectsForLang(lang){
+  const baseSel=document.getElementById('baseType'); baseSel.innerHTML='';
+  selectData.baseType.forEach(o=>{ const opt=document.createElement('option'); opt.value=o.k; opt.textContent=(lang==='ur'?o.ur:o.en); baseSel.appendChild(opt); });
+  const pSel=document.getElementById('pensionType'); pSel.innerHTML='';
+  selectData.pensionType.forEach(o=>{ const opt=document.createElement('option'); opt.value=o.k; opt.textContent=(lang==='ur'?o.ur:o.en); pSel.appendChild(opt); });
+  const sSel=document.getElementById('scheme'); sSel.innerHTML='';
+  selectData.scheme.forEach(o=>{ const opt=document.createElement('option'); opt.value=o.k; opt.textContent=(lang==='ur'?o.ur:o.en); sSel.appendChild(opt); });
+}
+
+/* UI translations */
+const UI = {
+  en:{brandTitle:'PakPension v4',brandSubtitle:'Estimate pension, commutation & gratuity — estimates only. Use official AGPR tables for final figures.',pageTitle:'Pension Calculator — Pakistan (QA v4)',labelEmpName:'Employee name',labelBPS:'Grade / Basic Pay Scale (BPS)',labelDOB:'Date of Birth',labelAppointment:'Date of Appointment',labelRetirement:'Date of Retirement / Leaving',labelService:'Total service (years)',labelLastPay:'Last basic pay / emolument (PKR)',labelBaseType:'Calculation base',labelPensionType:'Pension type',labelScheme:'Pension scheme',calcPensionBtn:'Calculate Pension',resetBtn:'Reset',printBtn:'Print',legalTitle:'Legal:',legalText:'This tool provides <strong>estimates only</strong>. Official calculations must use AGPR/department actuarial tables.',resultTitle:'Pension Overview',lblMonthly:'Monthly pension',lblAnnual:'Annual pension',lblServiceDisplay:'Qualifying service',lblBPSDisplay:'BPS / Grade',extrasTitle:'Commutation & Gratuity',labelCommPct:'Commutation percentage (%) — max 35%',labelCommFactor:'Commutation factor (or leave blank to auto-lookup by age next birthday)',labelGratuityRate:'Gratuity rate per completed year (PKR)',calcExtrasBtn:'Calculate Extras',clearExtrasBtn:'Clear',extrasResultTitle:'Commutation & Gratuity',extrasNote:'Note: factors and rates are for estimation. Use official tables for legal amounts.',quickTitle:'Quick actions',copyBtn:'Copy results',csvBtn:'Download CSV',accessNote:'Accessibility: use keyboard only — focus styles are enabled.'},
+  ur:{brandTitle:'پاک پینشن v4',brandSubtitle:'پینشن، کمیوٹیشن اور گریجویٹی کا تخمینہ — صرف اندازہ۔ حتمی اعداد و شمار کے لیے AGPR جدول استعمال کریں۔',pageTitle:'پنشن کیلکولیٹر — پاکستان (QA v4)',labelEmpName:'ملازم کا نام',labelBPS:'گریڈ / بنیادی پے اسکیل (BPS)',labelDOB:'تاریخ پیدائش',labelAppointment:'تقرری کی تاریخ',labelRetirement:'ریٹائرمنٹ / روانگی کی تاریخ',labelService:'کل سروس (سال)',labelLastPay:'آخری بنیادی تنخواہ (PKR)',labelBaseType:'حساب کا مبنی',labelPensionType:'پینشن کی قسم',labelScheme:'پنشن سکیم',calcPensionBtn:'پنشن کیلکولیٹ کریں',resetBtn:'ری سیٹ',printBtn:'پرنٹ',legalTitle:'قانونی:',legalText:'یہ ٹول صرف <strong>اندازہ</strong> دیتا ہے۔ حتمی حسابات کے لیے AGPR/محکمہ جدول استعمال کریں۔',resultTitle:'پنشن کا جائزہ',lblMonthly:'ماہانہ پینشن',lblAnnual:'سالانہ پینشن',lblServiceDisplay:'قابلِ قبول سروس',lblBPSDisplay:'BPS / گریڈ',extrasTitle:'کمیوٹیشن اور گریجویٹی',labelCommPct:'کمیوٹیشن فیصد (%) — زیادہ سے زیادہ 35%',labelCommFactor:'کمیوٹیشن فیکٹر (خالی چھوڑیں تو عمر کے حساب سے آٹو لوک اپ)',labelGratuityRate:'ہر مکمل سال کے لیے گریجویٹی ریٹ (PKR)',calcExtrasBtn:'کمیوٹیشن اور گریجویٹی کیلکولیٹ کریں',clearExtrasBtn:'صاف کریں',extrasResultTitle:'کمیوٹیشن اور گریجویٹی',extrasNote:'نوٹ: اعداد و شمار اندازہ ہیں۔ حتمی اعداد کے لئے سرکاری جدول دیکھیں۔',quickTitle:'فوری اعمال',copyBtn:'نتائج نقل کریں',csvBtn:'CSV ڈاؤن لوڈ کریں',accessNote:'رسائی: صرف کی بورڈ استعمال کریں — فوکس اسٹائل فعال ہیں۔'}
+};
+
+const LANG_KEY = 'pakpension_lang';
+function setLanguage(lang){
+  localStorage.setItem(LANG_KEY, lang);
+  document.documentElement.lang = (lang==='ur' ? 'ur' : 'en');
+  document.documentElement.dir = (lang==='ur' ? 'rtl' : 'ltr');
+  document.title = (lang==='ur' ? UI.ur.pageTitle : UI.en.pageTitle);
+  const mapIds = ['brandTitle','brandSubtitle','pageTitle','labelEmpName','labelBPS','labelDOB','labelAppointment','labelRetirement','labelService','labelLastPay','labelBaseType','labelPensionType','labelScheme','calcPensionBtn','resetBtn','printBtn','legalTitle','legalText','resultTitle','lblMonthly','lblAnnual','lblServiceDisplay','lblBPSDisplay','extrasTitle','labelCommPct','labelCommFactor','labelGratuityRate','calcExtrasBtn','clearExtrasBtn','extrasResultTitle','extrasNote','quickTitle','copyBtn','csvBtn','accessNote'];
+  mapIds.forEach(id=>{ const el=document.getElementById(id); if(!el) return; const txt=(lang==='ur' ? (UI.ur[id]||UI.ur[id]) : (UI.en[id]||UI.en[id])); if(id==='legalText' || id==='extrasNote') el.innerHTML=txt; else el.textContent=txt; });
+  document.querySelectorAll('[data-ph]').forEach(inp=>{ const key=inp.getAttribute('id'); if(lang==='ur'){ if(key==='empName') inp.placeholder='مثلاً محمد علی'; if(key==='lastPay') inp.placeholder='مثلاً 50000'; if(key==='commFactor') inp.placeholder='مثلاً 11.73'; if(key==='gratuityRate') inp.placeholder='مثلاً 12000'; } else { if(key==='empName') inp.placeholder='e.g. Muhammad Ali'; if(key==='lastPay') inp.placeholder='e.g. 50000'; if(key==='commFactor') inp.placeholder='e.g. 11.73'; if(key==='gratuityRate') inp.placeholder='e.g. 12000'; } });
+  populateSelectsForLang(lang);
+  document.getElementById('btn-en').setAttribute('aria-pressed', lang==='en' ? 'true' : 'false');
+  document.getElementById('btn-ur').setAttribute('aria-pressed', lang==='ur' ? 'true' : 'false');
+}
+
+/* init */
+(function initLang(){ const saved=localStorage.getItem(LANG_KEY)||'en'; setLanguage(saved); })();
+
+function parseDateValue(id){ const v=document.getElementById(id).value; return v? new Date(v+'T00:00:00'): null; }
+function computeService(appointmentDate, retirementDate){ if(!appointmentDate||!retirementDate||retirementDate<=appointmentDate) return null; let y=retirementDate.getFullYear()-appointmentDate.getFullYear(); let m=retirementDate.getMonth()-appointmentDate.getMonth(); let d=retirementDate.getDate()-appointmentDate.getDate(); if(d<0){ m-=1; } if(m<0){ y-=1; m+=12; } const days=Math.round((retirementDate - new Date(retirementDate.getFullYear(), retirementDate.getMonth(), appointmentDate.getDate()))/(1000*60*60*24)); const decimalYears=+(y + (m/12) + Math.max(0, days)/365).toFixed(3); return {yearsWhole:y,months:m,decimalYears}; }
+function updateServiceFromDates(){ const appt=parseDateValue('appointment'); const ret=parseDateValue('retirement'); const serviceInput=document.getElementById('service'); if(!appt||!ret){ serviceInput.value=''; return; } if(ret<=appt){ serviceInput.value=''; alert((document.documentElement.lang==='ur')?'ریٹائرمنٹ کی تاریخ تقرری کے بعد ہونی چاہیے۔':'Retirement date must be after appointment date.'); return; } const s=computeService(appt,ret); if(!s){ serviceInput.value=''; return; } serviceInput.value=`${s.yearsWhole} years ${s.months} months (${s.decimalYears} yrs)`; }
+
+function validateForm(requirePensionCalculated=false){
+  const name=document.getElementById('empName').value.trim(); const bps=document.getElementById('bps').value; const dob=parseDateValue('dob'); const appt=parseDateValue('appointment'); const ret=parseDateValue('retirement'); const lastPay=parseFloat(document.getElementById('lastPay').value||NaN); const serviceStr=document.getElementById('service').value; const lang=document.documentElement.lang==='ur'; if(!name){ alert(lang?'ملازم کا نام درج کریں۔':'Please enter employee name.'); return false; } if(!bps){ alert(lang?'براہ کرم گریڈ منتخب کریں۔':'Please select Grade / BPS.'); return false; } if(!dob){ alert(lang?'براہ کرم تاریخ پیدائش درج کریں۔':'Please enter Date of Birth.'); return false; } if(!appt||!ret){ alert(lang?'براہ کرم تقرری اور ریٹائرمنٹ کی درست تاریخیں درج کریں۔':'Please enter valid appointment and retirement dates.'); return false; } if(ret<=appt){ alert(lang?'ریٹائرمنٹ کی تاریخ تقرری کے بعد ہونی چاہیے۔':'Retirement date must be after appointment date.'); return false; } if(isNaN(lastPay)||lastPay<=0){ alert(lang?'براہ کرم درست آخری بنیادی تنخواہ درج کریں۔':'Please enter a valid last basic pay.'); return false; } if(!serviceStr){ alert(lang?'سروس کے سال حساب نہیں ہوئے۔ تاریخیں چیک کریں۔':'Service years not calculated. Check dates.'); return false; } if(requirePensionCalculated){ const pensionDiv=document.getElementById('pensionResult'); if(pensionDiv.style.display==='none'){ alert(lang?'براہ کرم پہلے پنشن کا حساب کریں۔':'Please calculate pension first.'); return false; } } return true; }
+
+function onCalculatePension(){
+  if(!validateForm(false)) return;
+  const lastPay=parseFloat(document.getElementById('lastPay').value); const appt=parseDateValue('appointment'); const ret=parseDateValue('retirement'); const serviceObj=computeService(appt,ret); if(!serviceObj){ alert(document.documentElement.lang==='ur'?'سروس کا حساب ناکام ہوا۔':'Service calculation failed.'); return; } const serviceYears=serviceObj.decimalYears; const bps=document.getElementById('bps').value; const pensionMonthly=(lastPay*7*serviceYears)/300; const pensionAnnual=pensionMonthly*12; document.getElementById('monthlyPension').textContent=nfPKR.format(pensionMonthly)+(document.documentElement.lang==='ur'?' / ماہ':' / month'); document.getElementById('annualPension').textContent=nfPKR.format(pensionAnnual)+(document.documentElement.lang==='ur'?' / سال':' / year'); document.getElementById('displayService').textContent=`${serviceObj.yearsWhole}y ${serviceObj.months}m (${serviceYears} yrs)`; document.getElementById('displayBPS').textContent=bps||'—'; document.getElementById('pensionResult').style.display='block'; document.getElementById('pensionResult').classList.add('fade-in'); document.getElementById('pensionResult').dataset.pensionMonthly=pensionMonthly; document.getElementById('pensionResult').dataset.serviceYears=serviceObj.yearsWhole; document.getElementById('pensionResult').dataset.serviceDecimal=serviceYears; document.getElementById('monthlyPension').focus(); }
+
+function onCalculateExtras(){ if(!validateForm(true)) return; const pensionDiv=document.getElementById('pensionResult'); const pensionMonthly=parseFloat(pensionDiv.dataset.pensionMonthly||0); if(!(pensionMonthly>0)){ alert(document.documentElement.lang==='ur'?'براہ کرم پہلے پنشن حساب کریں۔':'Please calculate pension first.'); return; } let commPct=parseFloat(document.getElementById('commPct').value||0); const commFactorInput=parseFloat(document.getElementById('commFactor').value||NaN); const gratuityRate=parseFloat(document.getElementById('gratuityRate').value||0); const dob=parseDateValue('dob'); const ret=parseDateValue('retirement'); if(isNaN(commPct)||commPct<0) commPct=0; if(commPct>35){ alert(document.documentElement.lang==='ur'?'کمیوٹیشن فیصد 35% تک محدود ہے۔':'Commutation percentage capped at 35%'); commPct=35; document.getElementById('commPct').value=35; } let factor=commFactorInput; if(isNaN(factor)||factor<=0){ let age=ret.getFullYear()-dob.getFullYear(); const m=ret.getMonth()-dob.getMonth(); if(m<0||(m===0&&ret.getDate()<dob.getDate())) age--; const ageNext=age+1; factor=getCommutationFactorByAge(ageNext); } const commutedPortionMonthly=pensionMonthly*(commPct/100); const reducedPensionMonthly=pensionMonthly-commutedPortionMonthly; const commutationLumpSum=commutedPortionMonthly*factor*12; const completedYears=parseInt(document.getElementById('pensionResult').dataset.serviceYears||'0',10); const gratuity=(isNaN(gratuityRate)||gratuityRate<=0)?0:(gratuityRate*completedYears); document.getElementById('displayCommPct').textContent=commPct+' %'; document.getElementById('displayReduced').textContent=nfPKR.format(reducedPensionMonthly)+(document.documentElement.lang==='ur'?' / ماہ':' / month'); document.getElementById('displayCommutedAmt').textContent=nfPKR.format(commutationLumpSum); document.getElementById('displayGratuity').textContent=gratuity>0?nfPKR.format(gratuity):'—'; const extrasDiv=document.getElementById('extrasResult'); extrasDiv.style.display='block'; extrasDiv.classList.add('fade-in'); extrasDiv.dataset.commutation=commutationLumpSum; extrasDiv.dataset.gratuity=gratuity; }
+
+function copyResults(){ const pensionDiv=document.getElementById('pensionResult'); if(pensionDiv.style.display==='none'){ alert(document.documentElement.lang==='ur'?'کوئی نتیجہ نہیں۔ پہلے پنشن کیلکولیٹ کریں۔':'No results to copy. Calculate pension first.'); return; } const monthly=document.getElementById('monthlyPension').textContent; const annual=document.getElementById('annualPension').textContent; const commuted=document.getElementById('displayCommutedAmt').textContent||'—'; const gratuity=document.getElementById('displayGratuity').textContent||'—'; const text=`${document.getElementById('labelEmpName').textContent}: ${document.getElementById('empName').value}\nMonthly: ${monthly}\nAnnual: ${annual}\nCommutation lump sum: ${commuted}\nGratuity: ${gratuity}`; navigator.clipboard?.writeText(text).then(()=> alert(document.documentElement.lang==='ur'?'نتائج کلپ بورڈ پر نقل ہو گئے۔':'Results copied to clipboard.'),()=> alert(document.documentElement.lang==='ur'?'نقل ناکام':'Copy failed.')); }
+
+function downloadCSV(){ const name=document.getElementById('empName').value||''; const bps=document.getElementById('bps').value||''; const monthly=document.getElementById('monthlyPension').textContent||''; const annual=document.getElementById('annualPension').textContent||''; const commuted=document.getElementById('displayCommutedAmt').textContent||''; const gratuity=document.getElementById('displayGratuity').textContent||''; const rows=[['Employee','BPS','Monthly Pension','Annual Pension','Commutation Lump','Gratuity'],[name,bps,monthly,annual,commuted,gratuity]]; const csv=rows.map(r=>r.map(cell=>`"${String(cell).replace(/"/g,'""')}"`).join(',')).join('\n'); const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=`pension_${(name||'result').replace(/\s+/g,'_')}.csv`; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url); }
+
+function onReset(){ document.getElementById('pensionForm').reset(); document.getElementById('service').value=''; document.getElementById('pensionResult').style.display='none'; document.getElementById('extrasResult').style.display='none'; delete document.getElementById('pensionResult').dataset.pensionMonthly; delete document.getElementById('pensionResult').dataset.serviceYears; delete document.getElementById('extrasResult').dataset; }
+
+function clearExtraResults(){ document.getElementById('extrasResult').style.display='none'; delete document.getElementById('extrasResult').dataset.commutation; delete document.getElementById('extrasResult').dataset.gratuity; }
+
+document.getElementById('pensionForm').addEventListener('keydown',function(e){ if(e.key==='Enter'){ e.preventDefault(); onCalculatePension(); } });
+
+/* attach handlers */
+document.getElementById('btn-en').addEventListener('click',()=>setLanguage('en'));
+document.getElementById('btn-ur').addEventListener('click',()=>setLanguage('ur'));
+document.getElementById('calcPensionBtn').addEventListener('click',onCalculatePension);
+document.getElementById('resetBtn').addEventListener('click',onReset);
+document.getElementById('printBtn').addEventListener('click',()=>window.print());
+document.getElementById('calcExtrasBtn').addEventListener('click',onCalculateExtras);
+document.getElementById('clearExtrasBtn').addEventListener('click',clearExtraResults);
+document.getElementById('copyBtn').addEventListener('click',copyResults);
+document.getElementById('csvBtn').addEventListener('click',downloadCSV);
+
+/* initialize selects */
+populateSelectsForLang(localStorage.getItem(LANG_KEY)||'en');
