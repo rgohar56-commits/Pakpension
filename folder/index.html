@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>PakPension v4 — QA Approved Pension Calculator (Pakistan)</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/earlyaccess/notonastaliqurdudraft.css" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="brand">
+        <div class="logo" aria-hidden>PP</div>
+        <div>
+          <h1 id="brandTitle">PakPension v4</h1>
+          <div id="brandSubtitle" class="subtitle">Estimate pension, commutation & gratuity — estimates only. Use official AGPR tables for final figures.</div>
+        </div>
+      </div>
+
+      <div class="row" role="group" aria-label="Language switch">
+        <button class="btn-flag" id="btn-en" title="English (EN)" aria-pressed="false">🇬🇧 EN</button>
+        <button class="btn-flag" id="btn-ur" title="اردو (UR)" aria-pressed="false">🇵🇰 اردو</button>
+      </div>
+    </header>
+
+    <main class="card fade-in" role="main" aria-labelledby="pageTitle">
+      <h2 id="pageTitle">Pension Calculator — Pakistan (QA v4)</h2>
+      <div class="grid">
+        <!-- LEFT: Form -->
+        <section>
+          <form id="pensionForm" onsubmit="return false;" novalidate>
+            <div class="form-grid">
+              <div>
+                <label id="labelEmpName" for="empName">Employee name</label>
+                <input id="empName" type="text" aria-label="Employee name" placeholder="e.g. Muhammad Ali" data-ph="e.g. Muhammad Ali" />
+              </div>
+
+              <div>
+                <label id="labelBPS" for="bps">Grade / Basic Pay Scale (BPS)</label>
+                <select id="bps" aria-label="Grade BPS"></select>
+              </div>
+
+              <div>
+                <label id="labelDOB" for="dob">Date of Birth</label>
+                <input id="dob" type="date" aria-label="Date of birth" />
+              </div>
+
+              <div>
+                <label id="labelAppointment" for="appointment">Date of Appointment</label>
+                <input id="appointment" type="date" aria-label="Date of appointment" onchange="updateServiceFromDates()" />
+              </div>
+
+              <div>
+                <label id="labelRetirement" for="retirement">Date of Retirement / Leaving</label>
+                <input id="retirement" type="date" aria-label="Date of retirement" onchange="updateServiceFromDates()" />
+              </div>
+
+              <div>
+                <label id="labelService" for="service">Total service (years)</label>
+                <input id="service" type="text" readonly aria-readonly="true" aria-label="Qualifying service in years" placeholder="Auto-calculated" />
+              </div>
+
+              <div>
+                <label id="labelLastPay" for="lastPay">Last basic pay / emolument (PKR)</label>
+                <input id="lastPay" type="number" min="0" step="0.01" aria-label="Last basic pay" placeholder="e.g. 50000" data-ph="e.g. 50000" />
+              </div>
+
+              <div>
+                <label id="labelBaseType" for="baseType">Calculation base</label>
+                <select id="baseType" aria-label="Calculation base"></select>
+              </div>
+
+              <div>
+                <label id="labelPensionType" for="pensionType">Pension type</label>
+                <select id="pensionType" aria-label="Pension type"></select>
+              </div>
+
+              <div>
+                <label id="labelScheme" for="scheme">Pension scheme</label>
+                <select id="scheme" aria-label="Pension scheme"></select>
+              </div>
+            </div>
+
+            <div class="actions">
+              <button class="btn btn-primary" id="calcPensionBtn">Calculate Pension</button>
+              <button class="btn btn-ghost" type="button" id="resetBtn">Reset</button>
+              <button class="btn btn-ghost" type="button" id="printBtn">Print</button>
+            </div>
+
+            <div id="legal" class="legal" role="note" aria-live="polite">
+              <strong id="legalTitle">Legal:</strong> <span id="legalText">This tool provides <strong>estimates only</strong>. Official calculations must use AGPR/department actuarial tables.</span>
+            </div>
+          </form>
+        </section>
+
+        <!-- RIGHT: Results & Extras -->
+        <aside>
+          <div id="pensionResult" class="result" aria-live="polite" style="display:none">
+            <h3 id="resultTitle">Pension Overview</h3>
+            <div class="result-row"><div class="muted" id="lblMonthly">Monthly pension</div><div id="monthlyPension" class="accent">—</div></div>
+            <div class="result-row"><div class="muted" id="lblAnnual">Annual pension</div><div id="annualPension">—</div></div>
+            <div class="result-row"><div class="muted" id="lblServiceDisplay">Qualifying service</div><div id="displayService">—</div></div>
+            <div class="result-row"><div class="muted" id="lblBPSDisplay">BPS / Grade</div><div id="displayBPS">—</div></div>
+          </div>
+
+          <div style="height:14px"></div>
+
+          <div class="card extras-card">
+            <h3 id="extrasTitle">Commutation & Gratuity</h3>
+
+            <label id="labelCommPct" for="commPct">Commutation percentage (%) — max 35%</label>
+            <input id="commPct" type="number" min="0" max="35" value="0" />
+
+            <label id="labelCommFactor" for="commFactor">Commutation factor (or leave blank to auto-lookup by age next birthday)</label>
+            <input id="commFactor" type="number" step="0.01" placeholder="e.g. 11.73" data-ph="e.g. 11.73" />
+
+            <label id="labelGratuityRate" for="gratuityRate">Gratuity rate per completed year (PKR)</label>
+            <input id="gratuityRate" type="number" step="0.01" placeholder="e.g. 12000" data-ph="e.g. 12000" />
+
+            <div class="extras-actions">
+              <button class="btn btn-primary" id="calcExtrasBtn">Calculate Extras</button>
+              <button class="btn btn-ghost" id="clearExtrasBtn">Clear</button>
+            </div>
+
+            <div id="extrasResult" class="result" style="display:none;margin-top:12px">
+              <h4 id="extrasResultTitle">Commutation & Gratuity</h4>
+              <div class="result-row"><div class="muted">Commutation chosen</div><div id="displayCommPct">—</div></div>
+              <div class="result-row"><div class="muted">Reduced pension (monthly)</div><div id="displayReduced">—</div></div>
+              <div class="result-row"><div class="muted">Commutation lump-sum (PKR)</div><div id="displayCommutedAmt">—</div></div>
+              <div class="result-row"><div class="muted">Estimated gratuity (PKR)</div><div id="displayGratuity">—</div></div>
+              <div id="extrasNote" class="small">Note: factors and rates are for estimation. Use official tables for legal amounts.</div>
+            </div>
+          </div>
+
+          <div style="height:14px"></div>
+
+          <div class="card actions-card">
+            <h3 id="quickTitle">Quick actions</h3>
+            <div class="quick-actions">
+              <button class="btn btn-ghost" id="copyBtn">Copy results</button>
+              <button class="btn btn-ghost" id="csvBtn">Download CSV</button>
+            </div>
+            <div id="accessNote" class="small">Accessibility: use keyboard only — focus styles are enabled.</div>
+          </div>
+        </aside>
+      </div>
+    </main>
+  </div>
+
+<script src="script.js"></script>
+</body>
+</html>
